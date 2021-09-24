@@ -64,20 +64,41 @@ done
 # 13 835Mhz
 # 14 821Mhz
 # 15 806Mhz (default)
-ui_print " ";
-GpuFreq="15";
-no=0;
-for ListFreq in 900 897 892 888 884 880 875 871 867 862 858 854 850 835 821 806; do
-    if [ ! -z "$(cat /tmp/zyc_kernelname | grep "${ListFreq}Mhz" )" ];then
-        GpuFreq="$no";
-        [ "$no" != "15" ] && ui_print "GPU: set max clock to ${ListFreq}Mhz(oc)";
-        [ "$no" == "15" ] && ui_print "use standard max clock 806Mhz(stock)";
-        break;
-    fi
-    no=$(($no+1));
-done
+if [ -z "$(cat /tmp/zyc_kernelname | grep "Neutrino-Stock" )" ];then
+    ui_print " ";
+    GpuFreq="15";
+    no=0;
+    for ListFreq in 900 897 892 888 884 880 875 871 867 862 858 854 850 835 821 806; do
+        if [ ! -z "$(cat /tmp/zyc_kernelname | grep "${ListFreq}Mhz" )" ];then
+            GpuFreq="$no";
+            [ "$no" != "15" ] && ui_print "GPU: set max clock to ${ListFreq}Mhz(oc)";
+            [ "$no" == "15" ] && ui_print "use standard max clock 806Mhz(stock)";
+            break;
+        fi
+        no=$(($no+1));
+    done
 
-patch_cmdline "zyc.gpu_clock" "zyc.gpu_clock=$GpuFreq";
+    patch_cmdline "zyc.gpu_clock" "zyc.gpu_clock=$GpuFreq";
+fi
+
+ChangeSeLinux="-1";
+if [ ! -z "$(cat /tmp/zyc_kernelname | grep "SetToEnforcing" )" ];then
+    ChangeSeLinux="1";
+    ui_print "SELinux will be forced to Enforcing by default";
+elif [ ! -z "$(cat /tmp/zyc_kernelname | grep "SetToPermissive" )" ];then
+    ChangeSeLinux="0";
+    ui_print "SELinux will be forced to Permissive by default";
+fi
+
+if [ "$ChangeSeLinux" != "-1" ];then
+    X=10;
+    while [ $X != 0 ];
+    do
+        patch_cmdline "enforcing" " ";
+        X=$(($X-1));
+    done
+    patch_cmdline "enforcing" "enforcing=$ChangeSeLinux";
+fi
 
 rm -rf /tmp/zyc_kernelname;
 
